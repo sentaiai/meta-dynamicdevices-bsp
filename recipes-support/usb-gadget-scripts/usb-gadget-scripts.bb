@@ -22,6 +22,7 @@ inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "usb-composite-gadget-fixed.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "disable"
+SYSTEMD_AUTO_ENABLE:${PN}:imx8mm-jaguar-sentai = "enable"
 
 do_install() {
     # Install USB gadget setup scripts
@@ -42,6 +43,14 @@ do_install() {
     install -m 0644 ${WORKDIR}/usb-composite-gadget-fixed.service ${D}${systemd_system_unitdir}/
 }
 
+do_install:append:imx8mm-jaguar-sentai() {
+	# LmP preset-all does not reliably enable serial-getty@ttyGS0; ship the enable symlink.
+	install -d ${D}${sysconfdir}/systemd/system/getty.target.wants
+	ln -sf ${systemd_system_unitdir}/serial-getty@.service \
+		${D}${sysconfdir}/systemd/system/getty.target.wants/serial-getty@ttyGS0.service
+}
+
+
 FILES:${PN} += " \
     ${bindir}/setup-usb-mixed-audio-gadget \
     ${bindir}/setup-fixed-uac2.sh \
@@ -53,3 +62,8 @@ FILES:${PN} += " \
     ${bindir}/setup-usb-audio-gadget \
     ${systemd_system_unitdir}/usb-composite-gadget-fixed.service \
 "
+
+FILES:${PN}:append:imx8mm-jaguar-sentai = " \
+    ${sysconfdir}/systemd/system/getty.target.wants/serial-getty@ttyGS0.service \
+"
+
