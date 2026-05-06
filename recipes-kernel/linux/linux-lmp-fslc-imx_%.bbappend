@@ -1,4 +1,6 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
+# imx8mm-jaguar-dt510 DTS + imx8mm-sw_pad_ctl.h live under lmp-device-tree (SoC pad words, shared header).
+FILESEXTRAPATHS:prepend:imx8mm-jaguar-dt510 := "${THISDIR}/../../recipes-bsp/device-tree/lmp-device-tree:"
 
 # Fix buildpaths QA warnings by ensuring debug prefix mapping is applied to kernel builds
 # This prevents TMPDIR references from being embedded in debug information
@@ -25,8 +27,8 @@ SRC_URI:append:imx8mm-jaguar-sentai = " \
 		file://0003-wireless-wilc1000-disable-scan-progress-message.patch \
 		file://imx8mm-jaguar-sentai/0006-leds-lp50xx-set-default-configuration.patch \
 		file://0002-asoc-tas2781-add-tas2563-codec-support.patch \
-		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d)} \
-		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d), d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://tas2562-driver.cfg', '', d), d)} \
 		${@bb.utils.contains('ENABLE_BOOT_PROFILING', '1', 'file://boot-profiling.cfg', '', d)} \
 		file://imx8mm-jaguar-sentai/rdc-driver.cfg \
 		file://imx8mm-jaguar-sentai.dts \
@@ -49,28 +51,29 @@ do_configure:append:imx8mm-jaguar-sentai(){
 
 SRC_URI:append:imx8mm-jaguar-dt510 = " \
 		file://i2c-dev-interface.cfg \
-		file://imx8mm-jaguar-dt510/lp50xx-led-driver.cfg \
+		file://imx8mm-sw_pad_ctl.h \
+		file://imx8mm-sw_pad_ctl-fields.h \
+		file://imx8mm-jaguar-dt510/pmic-pca9450.cfg \
+		${@bb.utils.contains('MACHINE_FEATURES', 'cp2108-usb-serial', 'file://imx8mm-jaguar-dt510/cp2108-usb-serial.cfg', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'mcp251xfd-can', 'file://imx8mm-jaguar-dt510/mcp251xfd-can.cfg', '', d)} \
 		file://usb-modem-support.cfg \
 		file://gpio-keys.cfg \
-		file://imx8mm-jaguar-dt510/stts22h-temperature-sensor.cfg \
-		file://imx8mm-jaguar-dt510/lis2dh-accelerometer.cfg \
-		file://imx8mm-jaguar-dt510/sht4x-humidity-sensor.cfg \
 		file://imx8mm-jaguar-dt510/video-disable.cfg \
-		file://imx8mm-jaguar-dt510/tas2562-audio-codec.cfg \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://imx8mm-jaguar-dt510/tas2562-audio-codec.cfg', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas6424', 'file://imx8mm-jaguar-dt510/tas6424-audio-codec.cfg', '', d)} \
 		file://imx8mm-jaguar-dt510/wifi-power-management.cfg \
-		file://lis2dh12-sensor.cfg \
 		file://usb-gadgets.cfg \
 		${@bb.utils.contains('DISTRO', 'lmp-mfgtool', '', 'file://imx8mm-jaguar-dt510/usb-audio-gadget.cfg', d)} \
 		file://0001-wireless-remove-nl80211-regdom-warning.patch \
 		file://0004-dts-imx8mm-evkb-fix-duplicate-label.patch \
-		file://0005-dts-imx8mm-evkb-fix-lp50xx-led-driver.patch \
 		file://0003-wireless-wilc1000-disable-scan-progress-message.patch \
-		file://imx8mm-jaguar-dt510/0006-leds-lp50xx-set-default-configuration.patch \
-		file://0002-asoc-tas2781-add-tas2563-codec-support.patch \
-		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d)} \
-		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0002-asoc-tas2781-add-tas2563-codec-support.patch', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d), d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://tas2562-driver.cfg', '', d), d)} \
 		${@bb.utils.contains('ENABLE_BOOT_PROFILING', '1', 'file://boot-profiling.cfg', '', d)} \
 		file://imx8mm-jaguar-dt510/rdc-driver.cfg \
+		${@bb.utils.contains('MACHINE_FEATURES', 'ksz9896', 'file://imx8mm-jaguar-dt510/ksz9896-ethernet-switch.cfg file://imx8mm-jaguar-dt510/ksz9896-mii-phy.cfg', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'bq25792-charger', 'file://imx8mm-jaguar-dt510/bq25792-charger.cfg file://imx8mm-jaguar-dt510/0010-mfd-bq257xx-add-bq25703a-core-fslc.patch file://imx8mm-jaguar-dt510/0011-power-supply-bq257xx-charger.patch file://imx8mm-jaguar-dt510/0012-regulator-bq257xx-boost-fslc.patch file://imx8mm-jaguar-dt510/0013-dt-bindings-mfd-ti-bq25703a-Import-binding-from-main.patch file://imx8mm-jaguar-dt510/0014-dt-bindings-mfd-ti-bq25703a-Expand-to-include-BQ2579.patch file://imx8mm-jaguar-dt510/0015-regulator-bq257xx-Remove-reference-to-the-parent-MFD.patch file://imx8mm-jaguar-dt510/0016-regulator-bq257xx-Drop-the-regulator_dev-from-the-dr.patch file://imx8mm-jaguar-dt510/0017-regulator-bq257xx-Make-OTG-enable-GPIO-really-option.patch file://imx8mm-jaguar-dt510/0018-power-supply-bq257xx-Fix-VSYSMIN-clamping-logic.patch file://imx8mm-jaguar-dt510/0019-power-supply-bq257xx-Make-the-default-current-limit-.patch file://imx8mm-jaguar-dt510/0020-power-supply-bq257xx-Consistently-use-indirect-get-s.patch file://imx8mm-jaguar-dt510/0021-power-supply-bq257xx-Add-fields-for-charging-and-ove.patch file://imx8mm-jaguar-dt510/0022-mfd-bq257xx-Add-BQ25792-support.patch file://imx8mm-jaguar-dt510/0023-regulator-bq257xx-Add-support-for-BQ25792.patch file://imx8mm-jaguar-dt510/0024-power-supply-bq257xx-Add-support-for-BQ25792.patch file://imx8mm-jaguar-dt510/bq257xx-mfd-kconfig.cfg', '', d)} \
 		file://imx8mm-jaguar-dt510.dts \
 "
 
@@ -80,6 +83,12 @@ SRC_URI:append:imx8mm-jaguar-dt510 = " \
 do_configure:append:imx8mm-jaguar-dt510(){
  if [ -f ${WORKDIR}/imx8mm-jaguar-dt510.dts ]; then
      cp ${WORKDIR}/imx8mm-jaguar-dt510.dts ${S}/arch/arm64/boot/dts
+     if [ -f ${WORKDIR}/imx8mm-sw_pad_ctl.h ]; then
+         cp ${WORKDIR}/imx8mm-sw_pad_ctl.h ${S}/arch/arm64/boot/dts
+     fi
+     if [ -f ${WORKDIR}/imx8mm-sw_pad_ctl-fields.h ]; then
+         cp ${WORKDIR}/imx8mm-sw_pad_ctl-fields.h ${S}/arch/arm64/boot/dts
+     fi
      echo "dtb-y += imx8mm-jaguar-dt510.dtb" >> ${S}/arch/arm64/boot/dts/Makefile
  else
      bbwarn "imx8mm-jaguar-dt510.dts not found in ${WORKDIR}, skipping DTS copy"

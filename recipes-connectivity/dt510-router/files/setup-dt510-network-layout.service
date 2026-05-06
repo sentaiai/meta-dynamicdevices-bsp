@@ -1,0 +1,14 @@
+[Unit]
+Description=DT510: DHCP client on lan1 (WAN); DHCP server + NAT on br-lan for lan2–lan4
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=DT510_WAN_IFACE=lan1
+Environment=DT510_LAN_BRIDGE_NAME=br-lan
+ExecStart=/usr/bin/setup-dt510-network-layout.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+From ff80e793a9c0f043596bafa1220b627ac1fc092c Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlenon@dynamicdevices.co.uk>
+Date: Tue, 14 Apr 2026 11:31:08 +0100
+Subject: [PATCH 06/12] power: supply: bq257xx: Fix VSYSMIN clamping logic
+
+Alexey Charkov Patchew v6 05/11 (backport onto linux-fslc 6.6-2.2.x-imx + bq257xx stack).
+---
+ drivers/power/supply/bq257xx_charger.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/power/supply/bq257xx_charger.c b/drivers/power/supply/bq257xx_charger.c
+index 02c7d8b61..7ca4ae610 100644
+--- a/drivers/power/supply/bq257xx_charger.c
++++ b/drivers/power/supply/bq257xx_charger.c
+@@ -128,9 +128,8 @@ static int bq25703_get_min_vsys(struct bq257xx_chg *pdata, int *intval)
+  * @vsys: voltage value to set in uV.
+  *
+  * This function takes a requested minimum system voltage value, clamps
+- * it between the minimum supported value by the charger and a user
+- * defined minimum system value, and then writes the value to the
+- * appropriate register.
++ * it between the user defined minimum system value and the maximum supported
++ * value by the charger, and then writes the value to the appropriate register.
+  *
+  * Return: Returns 0 on success or error if an error occurs.
+  */
+@@ -139,7 +138,7 @@ static int bq25703_set_min_vsys(struct bq257xx_chg *pdata, int vsys)
+ 	unsigned int reg;
+ 	int vsys_min = pdata->vsys_min;
+ 
+-	vsys = clamp(vsys, BQ25703_MINVSYS_MIN_UV, vsys_min);
++	vsys = clamp(vsys, vsys_min, BQ25703_MINVSYS_MAX_UV);
+ 	reg = ((vsys - BQ25703_MINVSYS_MIN_UV) / BQ25703_MINVSYS_STEP_UV);
+ 	reg = FIELD_PREP(BQ25703_MINVSYS_MASK, reg);
+ 
+-- 
+2.43.0
+

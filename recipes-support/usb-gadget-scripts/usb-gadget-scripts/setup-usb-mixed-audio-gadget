@@ -7,6 +7,9 @@
 
 CONFIGFS=/sys/kernel/config/usb_gadget
 GADGET_NAME="g_mixed_audio"
+
+# Ensure libcomposite is loaded (creates usb_gadget in configfs)
+modprobe libcomposite 2>/dev/null || true
 GADGET=$CONFIGFS/$GADGET_NAME
 CONFIG=$GADGET/configs/c.1
 FUNCTIONS=$GADGET/functions
@@ -19,7 +22,7 @@ MANUFACTURER="Dynamic Devices Ltd"
 PRODUCT="Jaguar Sentai Mixed Audio Device"
 
 # Audio Configuration
-SAMPLE_RATE=48000
+SAMPLE_RATE=16000
 SAMPLE_SIZE=2  # 16-bit (2 bytes)
 CHANNELS=2     # Stereo
 

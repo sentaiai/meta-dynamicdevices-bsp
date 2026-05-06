@@ -1,0 +1,175 @@
+#!/bin/bash
+# Dual UAC2 setup for DT510 (Driver + Passengers). Run as root.
+#
+# FIX: ci_hdrc has limited endpoints. ACM + 2x UAC2 exhausts them (afunc_bind -19).
+# Omit CDC ACM so only 2x UAC2 use the 4 endpoints - dual audio then works.
+# Use c_chmask=3, p_chmask=3 (stereo). Link UAC2 only (no ACM).
+#
+# Usage: sudo ./setup-usb-dual-audio-gadget {setup|stop|status|diagnose}
+#   (ACM omitted by default; no serial /dev/ttyGS0 - use network/SSH instead)
+#
+# Env:
+#   UDC=name   Force UDC (see /sys/class/udc). Otherwise first listed UDC.
+#   UDC_WAIT_SEC=max seconds to wait for UDC at boot (default 90).
+
+CONFIGFS=/sys/kernel/config/usb_gadget
+GADGET_NAME="g_dual_audio"
+GADGET=$CONFIGFS/$GADGET_NAME
+CONFIG=$GADGET/configs/c.1
+FUNCTIONS=$GADGET/functions
+
+VID="0x1d6b"
+PID="0x0105"
+SERIALNUMBER="$(cat /sys/devices/soc0/serial_number 2>/dev/null || cat /etc/machine-id 2>/dev/null || echo 'DD-DT510-UNKNOWN')"
+MANUFACTURER="Dynamic Devices Ltd"
+PRODUCT="Jaguar DT510 Dual Audio Device"
+SAMPLE_RATE=16000
+SAMPLE_SIZE=2
+UDC_WAIT_SEC="${UDC_WAIT_SEC:-90}"
+
+ensure_configfs() {
+    if [ ! -d "$CONFIGFS" ]; then
+        echo "  configfs not at $CONFIGFS — trying mount..."
+        mountpoint -q /sys/kernel/config 2>/dev/null || mount -t configfs none /sys/kernel/config 2>/dev/null || true
+    fi
+    if [ ! -d "$CONFIGFS" ]; then
+        echo "  ERROR: $CONFIGFS missing (configfs not mounted?)"
+        return 1
+    fi
+    return 0
+}
+
+wait_for_udc() {
+    local udc=""
+    local i=0
+    local max="${UDC_WAIT_SEC:-90}"
+    if [ -n "${UDC:-}" ]; then
+        if [ -d "/sys/class/udc/$UDC" ]; then
+            echo "$UDC"
+            return 0
+        fi
+        echo "  Waiting for UDC '$UDC' (up to ${max}s)..." >&2
+    else
+        echo "  Waiting for any UDC under /sys/class/udc (up to ${max}s)..." >&2
+    fi
+    while [ "$i" -lt "$max" ]; do
+        if [ -n "${UDC:-}" ]; then
+            [ -d "/sys/class/udc/$UDC" ] && { echo "$UDC"; return 0; }
+        else
+            udc="$(ls /sys/class/udc 2>/dev/null | head -1)"
+            [ -n "$udc" ] && { echo "$udc"; return 0; }
+        fi
+        if [ $((i % 15)) -eq 0 ] && [ "$i" -gt 0 ]; then
+            echo "  ... still no UDC after ${i}s (ls /sys/class/udc: $(ls /sys/class/udc 2>/dev/null | tr '\n' ' '))" >&2
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+    echo "  ERROR: No UDC after ${max}s. USB controller may not be in peripheral mode or driver not loaded." >&2
+    return 1
+}
+
+stop_gadget() {
+    echo "Stopping USB Dual Audio Gadget..."
+    ensure_configfs || true
+    for g in "$CONFIGFS"/g_*; do
+        [ -d "$g" ] && echo "" > "$g/UDC" 2>/dev/null || true
+    done
+    sleep 2
+    [ ! -d "$GADGET" ] && { echo "  Gadget not configured."; return 0; }
+    rm -f "$CONFIG"/uac2.* "$CONFIG"/acm.* 2>/dev/null || true
+    for f in "$FUNCTIONS"/uac2.* "$FUNCTIONS"/acm.*; do
+        [ -d "$f" ] && rmdir "$f" 2>/dev/null || true
+    done
+    rmdir "$CONFIG/strings/0x409" 2>/dev/null || true
+    rmdir "$CONFIG" 2>/dev/null || true
+    rmdir "$GADGET/strings/0x409" 2>/dev/null || true
+    rmdir "$GADGET" 2>/dev/null || true
+    echo "  Stopped."
+}
+
+setup_gadget() {
+    echo "Setting up Dual UAC2 (c_chmask=3, p_chmask=3)..."
+    ensure_configfs || return 1
+    modprobe libcomposite 2>/dev/null || true
+
+    mkdir -p "$GADGET" || { echo "  Failed to create gadget"; return 1; }
+    echo $VID > "$GADGET/idVendor"
+    echo $PID > "$GADGET/idProduct"
+    mkdir -p "$GADGET/strings/0x409"
+    echo "$SERIALNUMBER" > "$GADGET/strings/0x409/serialnumber"
+    echo "$MANUFACTURER" > "$GADGET/strings/0x409/manufacturer"
+    echo "$PRODUCT" > "$GADGET/strings/0x409/product"
+
+    mkdir -p "$CONFIG/strings/0x409"
+    echo "USB Dual Audio" > "$CONFIG/strings/0x409/configuration"
+    echo 0x80 > "$CONFIG/bmAttributes"
+    echo 250 > "$CONFIG/MaxPower"
+
+    for name in audio1 audio2; do
+        mkdir -p "$FUNCTIONS/uac2.$name"
+        echo "$PRODUCT $name" > "$FUNCTIONS/uac2.$name/function_name"
+        echo $SAMPLE_RATE > "$FUNCTIONS/uac2.$name/c_srate"
+        echo $SAMPLE_RATE > "$FUNCTIONS/uac2.$name/p_srate"
+        echo $SAMPLE_SIZE > "$FUNCTIONS/uac2.$name/c_ssize"
+        echo $SAMPLE_SIZE > "$FUNCTIONS/uac2.$name/p_ssize"
+        echo "async" > "$FUNCTIONS/uac2.$name/c_sync"
+        echo 3 > "$FUNCTIONS/uac2.$name/c_chmask"
+        echo 3 > "$FUNCTIONS/uac2.$name/p_chmask"
+        echo 1 > "$FUNCTIONS/uac2.$name/c_hs_bint" 2>/dev/null || true
+        echo 1 > "$FUNCTIONS/uac2.$name/p_hs_bint" 2>/dev/null || true
+        ln -sf "$FUNCTIONS/uac2.$name" "$CONFIG/"
+    done
+
+    local udc
+    udc="$(wait_for_udc)" || return 1
+    # On OTG ports the role switch may default to "none"; force device so the host sees us.
+    local role_switch="/sys/class/usb_role/${udc}-role-switch/role"
+    if [ -f "$role_switch" ] && [ "$(cat "$role_switch" 2>/dev/null)" = "none" ]; then
+        echo "  Forcing USB role to device (was none)"
+        echo "device" > "$role_switch" 2>/dev/null || true
+        sleep 1
+    fi
+    if echo "$udc" > "$GADGET/UDC" 2>/dev/null; then
+        # If still not attached, try role one more time after bind (OTG can need role then link).
+        if [ -f "$role_switch" ] && [ "$(cat /sys/class/udc/$udc/state 2>/dev/null)" = "not attached" ]; then
+            echo "device" > "$role_switch" 2>/dev/null && sleep 1 && echo "  Set role to device"
+        fi
+        echo "  Enabled on UDC $udc — host should enumerate (lsusb: $MANUFACTURER / $PRODUCT)"
+        return 0
+    fi
+    echo "  ERROR: UDC bind failed writing '$udc' to $GADGET/UDC"
+    dmesg 2>/dev/null | tail -25 | grep -iE 'usb|gadget|udc|dwc|ci_hdrc|error' || dmesg 2>/dev/null | tail -15
+    return 1
+}
+
+run_diagnose() {
+    echo "=== USB gadget diagnose ==="
+    echo "configfs: $CONFIGFS"
+    ls -la "$CONFIGFS" 2>/dev/null || echo "  (missing)"
+    echo "UDCs:"
+    ls -la /sys/class/udc 2>/dev/null || echo "  (none — peripheral USB not ready)"
+    echo "g_dual_audio UDC bind:"
+    cat "$GADGET/UDC" 2>/dev/null || echo "  (gadget not present or not bound)"
+    echo "ALSA UAC2:"
+    aplay -l 2>/dev/null | grep -iE 'UAC2|card' || echo "  (no UAC2 cards)"
+    echo "Recent kernel USB lines:"
+    dmesg 2>/dev/null | grep -iE 'usb|gadget|udc|dwc|ci_hdrc|peripheral' | tail -20 || true
+    echo "==========================="
+}
+
+case "${1:-setup}" in
+    setup|start)
+        stop_gadget
+        sleep 2
+        setup_gadget
+        exit $?
+        ;;
+    stop) stop_gadget ;;
+    status)
+        [ -d "$GADGET" ] && echo "Configured. UDC: $(cat "$GADGET/UDC" 2>/dev/null || echo 'not bound')" || echo "Not configured"
+        aplay -l 2>/dev/null | grep -E "UAC2|card" || true
+        ;;
+    diagnose) run_diagnose ;;
+    *) echo "Usage: $0 {setup|stop|status|diagnose}"; exit 1 ;;
+esac

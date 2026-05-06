@@ -140,8 +140,12 @@ then
     exit 1
 fi
 
-# (4) Program STUSB4500
+# (4) Program STUSB4500 (Sentai and other boards with STUSB4500 — not on DT510)
 echo -e "\n"
+if grep -q "jaguar-dt510" /proc/device-tree/compatible 2>/dev/null
+then
+    echo "(4) Program STUSB4500 — skipped (not populated on i.MX8MM Jaguar DT510)"
+else
 read -r -p "(4) Program STUSB4500? [y/N] " response
 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
 then
@@ -162,6 +166,7 @@ elif [[ "$response" =~ ^([yY][eE][yY])$ ]]
 then
     echo TEST FAILED
     exit 1
+fi
 fi
 
 # (5) Input button testing

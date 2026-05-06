@@ -1,0 +1,47 @@
+From 7df731282f4ca0bf23d068f85575f3a5dc3dc787 Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlenon@dynamicdevices.co.uk>
+Date: Tue, 14 Apr 2026 11:31:08 +0100
+Subject: [PATCH 04/12] regulator: bq257xx: Drop the regulator_dev from the
+ driver data
+
+Alexey Charkov Patchew v6 03/11 (backport onto linux-fslc 6.6-2.2.x-imx + bq257xx stack).
+---
+ drivers/regulator/bq257xx-regulator.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/regulator/bq257xx-regulator.c b/drivers/regulator/bq257xx-regulator.c
+index ee3103f6e..b7592ff9a 100644
+--- a/drivers/regulator/bq257xx-regulator.c
++++ b/drivers/regulator/bq257xx-regulator.c
+@@ -15,7 +15,6 @@
+ #include <linux/regulator/of_regulator.h>
+ 
+ struct bq257xx_reg_data {
+-	struct regulator_dev *bq257xx_reg;
+ 	struct gpio_desc *otg_en_gpio;
+ 	struct regulator_desc desc;
+ };
+@@ -140,6 +139,7 @@ static int bq257xx_regulator_probe(struct platform_device *pdev)
+ 	struct bq257xx_reg_data *pdata;
+ 	struct device_node *np = dev->of_node;
+ 	struct regulator_config cfg = {};
++	struct regulator_dev *rdev;
+ 
+ 	pdev->dev.of_node = pdev->dev.parent->of_node;
+ 	pdev->dev.of_node_reused = true;
+@@ -160,9 +160,9 @@ static int bq257xx_regulator_probe(struct platform_device *pdev)
+ 	if (!cfg.regmap)
+ 		return -ENODEV;
+ 
+-	pdata->bq257xx_reg = devm_regulator_register(dev, &pdata->desc, &cfg);
+-	if (IS_ERR(pdata->bq257xx_reg)) {
+-		return dev_err_probe(&pdev->dev, PTR_ERR(pdata->bq257xx_reg),
++	rdev = devm_regulator_register(dev, &pdata->desc, &cfg);
++	if (IS_ERR(rdev)) {
++		return dev_err_probe(&pdev->dev, PTR_ERR(rdev),
+ 				     "error registering bq257xx regulator");
+ 	}
+ 
+-- 
+2.43.0
+

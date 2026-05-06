@@ -6,12 +6,20 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI = " \
+    file://setup-usb-serial-gadget.sh \
     file://setup-usb-mixed-audio-gadget \
     file://setup-fixed-uac2.sh \
     file://start-fixed-usb-audio.sh \
     file://usb-composite-gadget-fixed.service \
     file://usb-audio-test.sh \
     file://uac2-module-test.sh \
+"
+
+# DT510-specific: dual USB audio gadget (2x UAC2 only, no ACM)
+SRC_URI:append:imx8mm-jaguar-dt510 = " \
+    file://setup-usb-dual-audio-gadget \
+    file://usb-dual-audio-gadget-dt510.service \
+    file://60-usb-gadget-libcomposite.conf \
 "
 
 S = "${WORKDIR}"
@@ -21,12 +29,19 @@ RDEPENDS:${PN} = "bash"
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "usb-composite-gadget-fixed.service"
+# DT510: dual UAC2 gadget at boot (no CDC ACM — endpoint limit)
+SYSTEMD_SERVICE:${PN}:imx8mm-jaguar-dt510 = "usb-dual-audio-gadget-dt510.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "disable"
 SYSTEMD_AUTO_ENABLE:${PN}:imx8mm-jaguar-sentai = "enable"
+# DT510: autostart only if MACHINE_FEATURES contains dt510-usb-dual-audio-autostart
+# (see imx8mm-jaguar-dt510.conf). Remove that feature for codec-first images; use
+# `systemctl start usb-dual-audio-gadget-dt510` for simulated USB testing without autostart.
+SYSTEMD_AUTO_ENABLE:${PN}:imx8mm-jaguar-dt510 = "${@bb.utils.contains('MACHINE_FEATURES', 'dt510-usb-dual-audio-autostart', 'enable', 'disable', d)}"
 
 do_install() {
     # Install USB gadget setup scripts
     install -d ${D}${bindir}
+    install -m 0755 ${WORKDIR}/setup-usb-serial-gadget.sh ${D}${bindir}/setup-usb-serial-gadget
     install -m 0755 ${WORKDIR}/setup-usb-mixed-audio-gadget ${D}${bindir}/setup-usb-mixed-audio-gadget
     install -m 0755 ${WORKDIR}/setup-fixed-uac2.sh ${D}${bindir}/setup-fixed-uac2.sh
     install -m 0755 ${WORKDIR}/start-fixed-usb-audio.sh ${D}${bindir}/start-fixed-usb-audio.sh
@@ -51,7 +66,16 @@ do_install:append:imx8mm-jaguar-sentai() {
 }
 
 
+do_install:append:imx8mm-jaguar-dt510() {
+    # DT510-specific: dual USB audio gadget (2x UAC2)
+    install -m 0755 ${WORKDIR}/setup-usb-dual-audio-gadget ${D}${bindir}/setup-usb-dual-audio-gadget
+    install -m 0644 ${WORKDIR}/usb-dual-audio-gadget-dt510.service ${D}${systemd_system_unitdir}/
+    install -d ${D}${sysconfdir}/modules-load.d
+    install -m 0644 ${WORKDIR}/60-usb-gadget-libcomposite.conf ${D}${sysconfdir}/modules-load.d/
+}
+
 FILES:${PN} += " \
+    ${bindir}/setup-usb-serial-gadget \
     ${bindir}/setup-usb-mixed-audio-gadget \
     ${bindir}/setup-fixed-uac2.sh \
     ${bindir}/start-fixed-usb-audio.sh \
@@ -67,3 +91,8 @@ FILES:${PN}:append:imx8mm-jaguar-sentai = " \
     ${sysconfdir}/systemd/system/getty.target.wants/serial-getty@ttyGS0.service \
 "
 
+FILES:${PN}:append:imx8mm-jaguar-dt510 = " \
+    ${bindir}/setup-usb-dual-audio-gadget \
+    ${systemd_system_unitdir}/usb-dual-audio-gadget-dt510.service \
+    ${sysconfdir}/modules-load.d/60-usb-gadget-libcomposite.conf \
+"

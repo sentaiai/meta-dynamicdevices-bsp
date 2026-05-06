@@ -1,0 +1,25 @@
+[Unit]
+Description=DT510 Dual USB Audio Gadget (Driver + Passengers, UAC2 only)
+# See usb-gadget-scripts/setup-usb-dual-audio-gadget for setup/stop/diagnose
+# Do NOT start before network-pre: UDC often appears only after USB controller probes.
+After=local-fs.target systemd-udev-trigger.service systemd-modules-load.service
+Wants=systemd-udev-trigger.service
+StartLimitIntervalSec=400
+StartLimitBurst=4
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Without libcomposite, configfs never exposes /sys/kernel/config/usb_gadget — setup exits 1.
+ExecStartPre=/sbin/modprobe libcomposite
+ExecStart=/usr/bin/setup-usb-dual-audio-gadget setup
+ExecStop=/usr/bin/setup-usb-dual-audio-gadget stop
+# If UDC was late, retry a few times (script also waits up to UDC_WAIT_SEC inside).
+Restart=on-failure
+RestartSec=30
+Environment=UDC_WAIT_SEC=120
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

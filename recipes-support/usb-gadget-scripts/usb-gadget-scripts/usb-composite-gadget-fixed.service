@@ -7,7 +7,7 @@ Wants=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/bin/bash -c 'echo "Loading UAC2 module with fixed bInterval..." && modprobe -r usb_f_uac2 2>/dev/null || true && modprobe -r u_audio 2>/dev/null || true && sleep 1 && modprobe u_audio && modprobe usb_f_uac2 c_hs_bint=1'
+ExecStartPre=/bin/bash -c 'modprobe libcomposite 2>/dev/null || true && echo "Loading UAC2 module with fixed bInterval..." && modprobe -r usb_f_uac2 2>/dev/null || true && modprobe -r u_audio 2>/dev/null || true && sleep 1 && modprobe u_audio && modprobe usb_f_uac2 c_hs_bint=1'
 ExecStart=/usr/bin/setup-usb-composite-gadget setup
 ExecStartPost=/bin/bash -c 'echo device > /sys/devices/platform/soc@0/32c00000.bus/32e40000.usb/ci_hdrc.0/usb_role/ci_hdrc.0-role-switch/role'
 ExecStop=/usr/bin/setup-usb-composite-gadget stop

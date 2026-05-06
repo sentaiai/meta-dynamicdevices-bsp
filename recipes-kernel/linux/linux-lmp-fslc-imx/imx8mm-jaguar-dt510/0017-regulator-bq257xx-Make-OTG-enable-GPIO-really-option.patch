@@ -1,0 +1,31 @@
+From 811fa44ccbea6b4ab1bda8c961ff67d519aec612 Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlenon@dynamicdevices.co.uk>
+Date: Tue, 14 Apr 2026 11:31:08 +0100
+Subject: [PATCH 05/12] regulator: bq257xx: Make OTG enable GPIO really
+ optional
+
+Alexey Charkov Patchew v6 04/11 (backport onto linux-fslc 6.6-2.2.x-imx + bq257xx stack).
+---
+ drivers/regulator/bq257xx-regulator.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/regulator/bq257xx-regulator.c b/drivers/regulator/bq257xx-regulator.c
+index b7592ff9a..78d2c02f3 100644
+--- a/drivers/regulator/bq257xx-regulator.c
++++ b/drivers/regulator/bq257xx-regulator.c
+@@ -127,6 +127,12 @@ static void bq257xx_reg_dt_parse_gpio(struct platform_device *pdev)
+ 	of_node_put(subchild);
+ 
+ 	if (IS_ERR(pdata->otg_en_gpio)) {
++		if (PTR_ERR(pdata->otg_en_gpio) == -ENOENT) {
++			/* No GPIO, will only use register writes for OTG */
++			pdata->otg_en_gpio = NULL;
++			return;
++		}
++
+ 		dev_err(&pdev->dev, "Error getting enable gpio: %ld\n",
+ 			PTR_ERR(pdata->otg_en_gpio));
+ 		return;
+-- 
+2.43.0
+

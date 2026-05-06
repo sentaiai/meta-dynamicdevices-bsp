@@ -1,0 +1,51 @@
+From f3b40a67ddb5527991749ecf89e6711bf70880a1 Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlenon@dynamicdevices.co.uk>
+Date: Tue, 14 Apr 2026 11:31:08 +0100
+Subject: [PATCH 07/12] power: supply: bq257xx: Make the default current limit
+ a per-chip attribute
+
+Alexey Charkov Patchew v6 06/11 (backport onto linux-fslc 6.6-2.2.x-imx + bq257xx stack).
+---
+ drivers/power/supply/bq257xx_charger.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/power/supply/bq257xx_charger.c b/drivers/power/supply/bq257xx_charger.c
+index 7ca4ae610..39718223c 100644
+--- a/drivers/power/supply/bq257xx_charger.c
++++ b/drivers/power/supply/bq257xx_charger.c
+@@ -18,6 +18,7 @@ struct bq257xx_chg;
+ 
+ /**
+  * struct bq257xx_chip_info - chip specific routines
++ * @default_iindpm_uA: default input current limit in microamps
+  * @bq257xx_hw_init: init function for hw
+  * @bq257xx_hw_shutdown: shutdown function for hw
+  * @bq257xx_get_state: get and update state of hardware
+@@ -26,6 +27,7 @@ struct bq257xx_chg;
+  * @bq257xx_set_iindpm: set maximum input current (in uA)
+  */
+ struct bq257xx_chip_info {
++	int default_iindpm_uA;
+ 	int (*bq257xx_hw_init)(struct bq257xx_chg *pdata);
+ 	void (*bq257xx_hw_shutdown)(struct bq257xx_chg *pdata);
+ 	int (*bq257xx_get_state)(struct bq257xx_chg *pdata);
+@@ -627,6 +629,7 @@ static const struct power_supply_desc bq257xx_power_supply_desc = {
+ };
+ 
+ static const struct bq257xx_chip_info bq25703_chip_info = {
++		.default_iindpm_uA = BQ25703_IINDPM_DEFAULT_UA,
+ 		.bq257xx_hw_init = &bq25703_hw_init,
+ 		.bq257xx_hw_shutdown = &bq25703_hw_shutdown,
+ 		.bq257xx_get_state = &bq25703_get_state,
+@@ -675,7 +678,7 @@ static int bq257xx_parse_dt(struct bq257xx_chg *pdata,
+ 				       "input-current-limit-microamp",
+ 				       &pdata->iindpm_max);
+ 	if (ret)
+-		pdata->iindpm_max = BQ25703_IINDPM_DEFAULT_UA;
++		pdata->iindpm_max = pdata->chip->default_iindpm_uA;
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

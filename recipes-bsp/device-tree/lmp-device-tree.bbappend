@@ -7,6 +7,8 @@ SRC_URI:append:imx8mm-jaguar-sentai = " \
 
 SRC_URI:append:imx8mm-jaguar-dt510 = " \
         file://imx8mm-jaguar-dt510.dts \
+        file://imx8mm-sw_pad_ctl.h \
+        file://imx8mm-sw_pad_ctl-fields.h \
 "
 
 COMPATIBLE_MACHINE:imx8mm-jaguar-sentai = ".*"

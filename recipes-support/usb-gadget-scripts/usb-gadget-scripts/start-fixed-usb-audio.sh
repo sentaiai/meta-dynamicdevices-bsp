@@ -53,8 +53,8 @@ if systemctl is-active --quiet usb-composite-gadget; then
     
     echo ""
     echo "🎵 Test commands:"
-    echo "  Playback: speaker-test -D hw:UAC2Gadget,0 -c 2 -r 48000 -f S16_LE -t sine -l 3"
-    echo "  Capture:  arecord -D hw:UAC2Gadget,0 -c 2 -r 44100 -f S16_LE --buffer-size=1024 --period-size=256 -d 5 test.wav"
+    echo "  Playback: speaker-test -D hw:UAC2Gadget,0 -c 2 -r 16000 -f S16_LE -t sine -l 3"
+    echo "  Capture:  arecord -D hw:UAC2Gadget,0 -c 2 -r 16000 -f S16_LE --buffer-size=1024 --period-size=256 -d 5 test.wav"
     
 else
     echo "❌ USB Composite Gadget service failed to start"

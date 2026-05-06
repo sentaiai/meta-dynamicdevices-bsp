@@ -1,0 +1,74 @@
+From e8e6bc7e239418390cf7f667334617de98082345 Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlenon@dynamicdevices.co.uk>
+Date: Tue, 14 Apr 2026 11:31:08 +0100
+Subject: [PATCH 03/12] regulator: bq257xx: Remove reference to the parent
+ MFD's dev
+
+Alexey Charkov Patchew v6 02/11 (backport onto linux-fslc 6.6-2.2.x-imx + bq257xx stack).
+---
+ drivers/regulator/bq257xx-regulator.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/regulator/bq257xx-regulator.c b/drivers/regulator/bq257xx-regulator.c
+index fc1ccede4..ee3103f6e 100644
+--- a/drivers/regulator/bq257xx-regulator.c
++++ b/drivers/regulator/bq257xx-regulator.c
+@@ -15,7 +15,6 @@
+ #include <linux/regulator/of_regulator.h>
+ 
+ struct bq257xx_reg_data {
+-	struct bq257xx_device *bq;
+ 	struct regulator_dev *bq257xx_reg;
+ 	struct gpio_desc *otg_en_gpio;
+ 	struct regulator_desc desc;
+@@ -23,11 +22,11 @@ struct bq257xx_reg_data {
+ 
+ static int bq25703_vbus_get_cur_limit(struct regulator_dev *rdev)
+ {
+-	struct bq257xx_reg_data *pdata = rdev_get_drvdata(rdev);
++	struct regmap *regmap = rdev_get_regmap(rdev);
+ 	int ret;
+ 	unsigned int reg;
+ 
+-	ret = regmap_read(pdata->bq->regmap, BQ25703_OTG_CURRENT, &reg);
++	ret = regmap_read(regmap, BQ25703_OTG_CURRENT, &reg);
+ 	if (ret)
+ 		return ret;
+ 	return FIELD_GET(BQ25703_OTG_CUR_MASK, reg) * BQ25703_OTG_CUR_STEP_UA;
+@@ -40,7 +39,7 @@ static int bq25703_vbus_get_cur_limit(struct regulator_dev *rdev)
+ static int bq25703_vbus_set_cur_limit(struct regulator_dev *rdev,
+ 				      int min_uA, int max_uA)
+ {
+-	struct bq257xx_reg_data *pdata = rdev_get_drvdata(rdev);
++	struct regmap *regmap = rdev_get_regmap(rdev);
+ 	unsigned int reg;
+ 
+ 	if ((min_uA > BQ25703_OTG_CUR_MAX_UA) || (max_uA < 0))
+@@ -52,7 +51,7 @@ static int bq25703_vbus_set_cur_limit(struct regulator_dev *rdev,
+ 	if ((reg * BQ25703_OTG_CUR_STEP_UA) < min_uA)
+ 		return -EINVAL;
+ 
+-	return regmap_write(pdata->bq->regmap, BQ25703_OTG_CURRENT,
++	return regmap_write(regmap, BQ25703_OTG_CURRENT,
+ 			    FIELD_PREP(BQ25703_OTG_CUR_MASK, reg));
+ }
+ 
+@@ -138,7 +137,6 @@ static void bq257xx_reg_dt_parse_gpio(struct platform_device *pdev)
+ static int bq257xx_regulator_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+-	struct bq257xx_device *bq = dev_get_drvdata(pdev->dev.parent);
+ 	struct bq257xx_reg_data *pdata;
+ 	struct device_node *np = dev->of_node;
+ 	struct regulator_config cfg = {};
+@@ -150,7 +148,6 @@ static int bq257xx_regulator_probe(struct platform_device *pdev)
+ 	if (!pdata)
+ 		return -ENOMEM;
+ 
+-	pdata->bq = bq;
+ 	pdata->desc = bq25703_vbus_desc;
+ 
+ 	platform_set_drvdata(pdev, pdata);
+-- 
+2.43.0
+

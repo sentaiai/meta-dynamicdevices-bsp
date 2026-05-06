@@ -4,6 +4,9 @@
 
 CONFIGFS=/sys/kernel/config/usb_gadget
 GADGET_NAME="g_fixed_uac2"
+
+# Ensure libcomposite is loaded (creates usb_gadget in configfs)
+modprobe libcomposite 2>/dev/null || true
 GADGET=$CONFIGFS/$GADGET_NAME
 CONFIG=$GADGET/configs/c.1
 FUNCTIONS=$GADGET/functions
@@ -50,8 +53,8 @@ setup_gadget() {
     echo "$PRODUCT Audio" > "$FUNCTIONS/uac2.audio/function_name"
     
     # Set audio parameters
-    echo 48000 > "$FUNCTIONS/uac2.audio/c_srate"
-    echo 48000 > "$FUNCTIONS/uac2.audio/p_srate"
+    echo 16000 > "$FUNCTIONS/uac2.audio/c_srate"
+    echo 16000 > "$FUNCTIONS/uac2.audio/p_srate"
     echo 2 > "$FUNCTIONS/uac2.audio/c_ssize"
     echo 2 > "$FUNCTIONS/uac2.audio/p_ssize"
     echo "async" > "$FUNCTIONS/uac2.audio/c_sync"
@@ -83,8 +86,8 @@ setup_gadget() {
         
         echo ""
         echo "🎵 Test commands:"
-        echo "  Playback: speaker-test -D hw:UAC2Gadget,0 -c 2 -r 48000 -f S16_LE -t sine -l 3"
-        echo "  Capture:  arecord -D hw:UAC2Gadget,0 -c 2 -r 44100 -f S16_LE --buffer-size=1024 --period-size=256 -d 5 test.wav"
+        echo "  Playback: speaker-test -D hw:UAC2Gadget,0 -c 2 -r 16000 -f S16_LE -t sine -l 3"
+        echo "  Capture:  arecord -D hw:UAC2Gadget,0 -c 2 -r 16000 -f S16_LE --buffer-size=1024 --period-size=256 -d 5 test.wav"
         
         return 0
     else
