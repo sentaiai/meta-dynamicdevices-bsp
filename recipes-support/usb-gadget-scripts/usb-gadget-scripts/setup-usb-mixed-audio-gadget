@@ -1,7 +1,7 @@
 #!/bin/sh
 # USB Mixed Audio Gadget Setup Script for imx8mm-jaguar-sentai
-# Uses UAC1 for capture (more compatible) and UAC2 for playback
-# This approach often resolves capture I/O errors
+# CDC ACM (serial) + UAC2 audio (LmP kernels often lack CONFIG_USB_CONFIGFS_F_UAC1;
+# UAC2 via usb_f_uac2 is available — see /proc/config.gz on target).
 #
 # Usage: setup-usb-mixed-audio-gadget {setup|stop|status|restart}
 
@@ -21,10 +21,11 @@ SERIALNUMBER="$(cat /sys/devices/soc0/serial_number 2>/dev/null || cat /etc/mach
 MANUFACTURER="Dynamic Devices Ltd"
 PRODUCT="Jaguar Sentai Mixed Audio Device"
 
-# Audio Configuration
+# Audio (UAC2)
 SAMPLE_RATE=16000
 SAMPLE_SIZE=2  # 16-bit (2 bytes)
-CHANNELS=2     # Stereo
+# Stereo channel mask for UAC2 (Front L + Front R)
+STEREO_CHMASK=3
 
 # Function to add CDC ACM function
 add_acm_function() {
@@ -34,27 +35,37 @@ add_acm_function() {
     ln -s "$FUNCTIONS/acm.$function_name" "$CONFIG" || echo "  Couldn't symlink acm.$function_name"
 }
 
-# Function to add UAC1 audio function (for capture)
-add_uac1_function() {
+# Function to add UAC2 audio function (host sees USB Audio + ACM in composite)
+add_uac2_function() {
     function_name="$1"
-    
-    mkdir "$FUNCTIONS/uac1.$function_name" || echo "  Couldn't create $FUNCTIONS/uac1.$function_name"
-    
-    echo "$PRODUCT UAC1" > "$FUNCTIONS/uac1.$function_name/function_name"
-    echo $SAMPLE_RATE > "$FUNCTIONS/uac1.$function_name/c_srate"
-    echo $SAMPLE_RATE > "$FUNCTIONS/uac1.$function_name/p_srate"
-    echo $SAMPLE_SIZE > "$FUNCTIONS/uac1.$function_name/c_ssize"
-    echo $SAMPLE_SIZE > "$FUNCTIONS/uac1.$function_name/p_ssize"
-    echo $CHANNELS > "$FUNCTIONS/uac1.$function_name/c_chmask"
-    echo $CHANNELS > "$FUNCTIONS/uac1.$function_name/p_chmask"
-    
-    # Enable volume and mute controls
-    echo 0x1 > "$FUNCTIONS/uac1.$function_name/c_mute_present" 2>/dev/null || true
-    echo 0x1 > "$FUNCTIONS/uac1.$function_name/c_volume_present" 2>/dev/null || true
-    echo 0x1 > "$FUNCTIONS/uac1.$function_name/p_mute_present" 2>/dev/null || true
-    echo 0x1 > "$FUNCTIONS/uac1.$function_name/p_volume_present" 2>/dev/null || true
-    
-    ln -s "$FUNCTIONS/uac1.$function_name" "$CONFIG" || echo "  Couldn't symlink uac1.$function_name"
+
+    if ! mkdir "$FUNCTIONS/uac2.$function_name"; then
+        echo "  ERROR: could not create $FUNCTIONS/uac2.$function_name"
+        echo "  Hint: modprobe u_audio usb_f_uac2"
+        return 1
+    fi
+
+    echo "$PRODUCT UAC2" > "$FUNCTIONS/uac2.$function_name/function_name"
+    echo "$SAMPLE_RATE" > "$FUNCTIONS/uac2.$function_name/c_srate"
+    echo "$SAMPLE_RATE" > "$FUNCTIONS/uac2.$function_name/p_srate"
+    echo "$SAMPLE_SIZE" > "$FUNCTIONS/uac2.$function_name/c_ssize"
+    echo "$SAMPLE_SIZE" > "$FUNCTIONS/uac2.$function_name/p_ssize"
+    echo "async" > "$FUNCTIONS/uac2.$function_name/c_sync"
+    echo "async" > "$FUNCTIONS/uac2.$function_name/p_sync" 2>/dev/null || true
+    echo "$STEREO_CHMASK" > "$FUNCTIONS/uac2.$function_name/c_chmask"
+    echo "$STEREO_CHMASK" > "$FUNCTIONS/uac2.$function_name/p_chmask"
+    echo 1 > "$FUNCTIONS/uac2.$function_name/c_hs_bint" 2>/dev/null || true
+    echo 1 > "$FUNCTIONS/uac2.$function_name/p_hs_bint" 2>/dev/null || true
+
+    echo 0x1 > "$FUNCTIONS/uac2.$function_name/c_mute_present" 2>/dev/null || true
+    echo 0x1 > "$FUNCTIONS/uac2.$function_name/c_volume_present" 2>/dev/null || true
+    echo 0x1 > "$FUNCTIONS/uac2.$function_name/p_mute_present" 2>/dev/null || true
+    echo 0x1 > "$FUNCTIONS/uac2.$function_name/p_volume_present" 2>/dev/null || true
+
+    ln -s "$FUNCTIONS/uac2.$function_name" "$CONFIG" || {
+        echo "  ERROR: could not symlink uac2.$function_name into config"
+        return 1
+    }
 }
 
 # Function to create gadget configuration
@@ -89,17 +100,20 @@ create_config() {
 
 # Function to setup USB mixed audio gadget
 setup_gadget() {
-    echo "Setting up USB Mixed Audio Gadget (CDC Serial + UAC1 Audio)..."
-    
-    # Create gadget configuration
-    create_config "USB Mixed Audio Device"
-    
-    # Add CDC ACM function for serial communication
+    echo "Setting up USB Mixed Audio Gadget (CDC Serial + UAC2)..."
+
+    modprobe u_audio 2>/dev/null || true
+    modprobe usb_f_uac2 2>/dev/null || true
+
+    create_config "USB Mixed Audio Device" || return 1
     add_acm_function "debug"
-    
-    # Add UAC1 audio function (more compatible for capture)
-    add_uac1_function "audio"
-    
+    add_uac2_function "audio" || return 1
+
+    if [ ! -d "$FUNCTIONS/uac2.audio" ]; then
+        echo "  ERROR: UAC2 function missing after setup"
+        return 1
+    fi
+
     echo "USB Mixed Audio Gadget configured successfully!"
 }
 
@@ -116,8 +130,7 @@ enable_gadget() {
     echo "Enabling USB Mixed Audio Gadget on $udc_device..."
     echo "$udc_device" > "$GADGET/UDC" || echo "  Couldn't write UDC"
     
-    echo "USB Mixed Audio Gadget enabled!"
-    echo "Using UAC1 for better capture compatibility"
+    echo "USB Mixed Audio Gadget enabled (UAC2 + CDC ACM)."
 }
 
 # Function to disable the gadget
@@ -127,10 +140,12 @@ disable_gadget() {
     if [ -d "$GADGET" ]; then
         # Unbind from UDC first
         echo "" > "$GADGET/UDC" 2>/dev/null || true
-        
+        sleep 1
+
         # Remove function symlinks from configuration
         rm -f "$CONFIG"/acm.* 2>/dev/null || true
         rm -f "$CONFIG"/uac1.* 2>/dev/null || true
+        rm -f "$CONFIG"/uac2.* 2>/dev/null || true
         
         # Remove configuration
         rm -rf "$CONFIG/strings/0x409" 2>/dev/null || true
@@ -155,20 +170,22 @@ show_status() {
     echo "=============================="
     
     if [ -d "$GADGET" ]; then
-        echo "Gadget: CONFIGURED (UAC1 VERSION)"
+        if [ -d "$FUNCTIONS/uac2.audio" ]; then
+            echo "Gadget: CONFIGURED (CDC ACM + UAC2)"
+        else
+            echo "Gadget: CONFIGURED (incomplete — no uac2.audio)"
+        fi
         echo "UDC: $(cat "$GADGET/UDC" 2>/dev/null || echo 'Not bound')"
-        
+
         echo ""
         echo "Functions:"
         for func in "$FUNCTIONS"/*; do
             if [ -d "$func" ]; then
                 func_name="$(basename "$func")"
                 echo "  $func_name: Available"
-                
-                # Show specific details for audio functions
-                if echo "$func_name" | grep -q "uac1"; then
-                    echo "    Sample Rate: $(cat "$func/p_srate" 2>/dev/null || echo 'N/A') Hz"
-                    echo "    Channels: $(cat "$func/p_chmask" 2>/dev/null || echo 'N/A')"
+                if echo "$func_name" | grep -q "uac2"; then
+                    echo "    Sample rate (playback): $(cat "$func/p_srate" 2>/dev/null || echo 'N/A') Hz"
+                    echo "    Playback chmask: $(cat "$func/p_chmask" 2>/dev/null || echo 'N/A')"
                 fi
             fi
         done
@@ -190,7 +207,7 @@ cleanup_existing() {
         fi
     done
     
-    sleep 1
+    sleep 2
 }
 
 # Main script logic
@@ -198,7 +215,7 @@ case "$1" in
     "setup"|"start")
         cleanup_existing
         disable_gadget
-        setup_gadget
+        setup_gadget || exit 1
         enable_gadget
         ;;
     "stop"|"disable")
@@ -210,17 +227,15 @@ case "$1" in
     "restart")
         cleanup_existing
         disable_gadget
-        setup_gadget
+        setup_gadget || exit 1
         enable_gadget
         ;;
     *)
         echo "Usage: $0 {setup|start|stop|disable|status|restart}"
         echo ""
-        echo "This script creates a mixed USB audio gadget using:"
-        echo "  - CDC ACM Serial interface (/dev/ttyGS0)"
-        echo "  - USB Audio Class 1.0 (more compatible for capture)"
-        echo ""
-        echo "UAC1 is often more compatible with host systems for capture."
+        echo "This script creates a mixed USB gadget:"
+        echo "  - CDC ACM serial (/dev/ttyGS0)"
+        echo "  - USB Audio Class 2 (UAC2) via usb_f_uac2"
         exit 1
         ;;
 esac
