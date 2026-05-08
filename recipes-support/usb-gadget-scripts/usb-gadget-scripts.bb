@@ -32,6 +32,8 @@ SYSTEMD_SERVICE:${PN} = "usb-composite-gadget-fixed.service"
 # DT510: dual UAC2 gadget at boot (no CDC ACM — endpoint limit)
 SYSTEMD_SERVICE:${PN}:imx8mm-jaguar-dt510 = "usb-dual-audio-gadget-dt510.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "disable"
+
+SYSTEMD_AUTO_ENABLE:${PN}:imx8mm-jaguar-sentai = "enable"
 # DT510: autostart only if MACHINE_FEATURES contains dt510-usb-dual-audio-autostart
 # (see imx8mm-jaguar-dt510.conf). Remove that feature for codec-first images; use
 # `systemctl start usb-dual-audio-gadget-dt510` for simulated USB testing without autostart.
