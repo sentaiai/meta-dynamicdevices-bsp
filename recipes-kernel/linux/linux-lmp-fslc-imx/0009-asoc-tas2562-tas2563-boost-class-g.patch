@@ -1,0 +1,79 @@
+From: Dynamic Devices <support@dynamicdevices.co.uk>
+Date: Fri, 29 May 2026 00:00:00 +0000
+Subject: [PATCH] ASoC: tas2562: Set TAS2563 boost to Class-G on probe
+
+TAS2563 BOOST_CFG1 (page 0, reg 0x33): BST_MODE=01 (Class-G), BST_EN=1
+(0x74). Applied when the device tree compatible is "ti,tas2563".
+
+Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
+---
+ sound/soc/codecs/tas2562.c | 23 +++++++++++++++++++++++
+ sound/soc/codecs/tas2562.h |  6 ++++++
+ 2 files changed, 29 insertions(+)
+
+diff --git a/sound/soc/codecs/tas2562.c b/sound/soc/codecs/tas2562.c
+index 123456abcdef..abcdef123456 100644
+--- a/sound/soc/codecs/tas2562.c
++++ b/sound/soc/codecs/tas2562.c
+@@ -318,12 +318,33 @@ static int tas2562_mute(struct snd_soc_dai *dai, int mute, int direction)
+ 	return tas2562_update_pwr_ctrl(tas2562);
+ }
+ 
++static int tas2563_set_boost_class_g(struct tas2562_data *tas2562)
++{
++	int ret;
++
++	ret = regmap_write(tas2562->regmap, TAS2562_PAGE_CTRL, 0);
++	if (ret)
++		return ret;
++
++	return regmap_write(tas2562->regmap, TAS2563_BOOST_CFG1,
++			    TAS2563_BOOST_CLASS_G_ENABLED);
++}
++
+ static int tas2562_codec_probe(struct snd_soc_component *component)
+ {
+ 	struct tas2562_data *tas2562 = snd_soc_component_get_drvdata(component);
++	int ret;
+ 
+ 	tas2562->component = component;
+ 
+ 	if (tas2562->sdz_gpio)
+ 		gpiod_set_value_cansleep(tas2562->sdz_gpio, 1);
+ 
++	if (device_is_compatible(tas2562->dev, "ti,tas2563")) {
++		ret = tas2563_set_boost_class_g(tas2562);
++		if (ret)
++			dev_warn(tas2562->dev,
++				 "Failed to set Class-G boost mode: %d\n", ret);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -708,6 +730,7 @@ static int tas2562_probe(struct i2c_client *client)
+ #ifdef CONFIG_OF
+ static const struct of_device_id tas2562_of_match[] = {
+ 	{ .compatible = "ti,tas2562", },
++	{ .compatible = "ti,tas2563", },
+ 	{ .compatible = "ti,tas2564", },
+ 	{ .compatible = "ti,tas2110", },
+ 	{ },
+diff --git a/sound/soc/codecs/tas2562.h b/sound/soc/codecs/tas2562.h
+index abcdef123456..123456abcdef 100644
+--- a/sound/soc/codecs/tas2562.h
++++ b/sound/soc/codecs/tas2562.h
+@@ -20,6 +20,12 @@
+ #define TAS2562_MISC_CFG1 TAS2562_REG(0, 0x04)
+ #define TAS2562_MISC_CFG2 TAS2562_REG(0, 0x05)
+ 
++/* TAS2563 boost control (BOOST_CFG1, page 0) */
++#define TAS2563_BOOST_CFG1		TAS2562_REG(0, 0x33)
++/* BST_MODE=01 (Class-G), BST_EN=1 */
++#define TAS2563_BOOST_CLASS_G_ENABLED	0x74
++
+ #define TAS2562_TDM_CFG0 TAS2562_REG(0, 0x06)
+ #define TAS2562_TDM_CFG1 TAS2562_REG(0, 0x07)
+ #define TAS2562_TDM_CFG2 TAS2562_REG(0, 0x08)
+-- 
+2.43.0

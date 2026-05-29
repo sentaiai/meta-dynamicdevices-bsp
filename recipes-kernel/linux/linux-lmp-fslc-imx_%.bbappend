@@ -28,6 +28,7 @@ SRC_URI:append:imx8mm-jaguar-sentai = " \
 		file://imx8mm-jaguar-sentai/0006-leds-lp50xx-set-default-configuration.patch \
 		file://0002-asoc-tas2781-add-tas2563-codec-support.patch \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d), d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0009-asoc-tas2562-tas2563-boost-class-g.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0009-asoc-tas2562-tas2563-boost-class-g.patch', '', d), d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://tas2562-driver.cfg', '', d), d)} \
 		${@bb.utils.contains('ENABLE_BOOT_PROFILING', '1', 'file://boot-profiling.cfg', '', d)} \
 		file://imx8mm-jaguar-sentai/rdc-driver.cfg \
@@ -69,6 +70,7 @@ SRC_URI:append:imx8mm-jaguar-dt510 = " \
 		file://0003-wireless-wilc1000-disable-scan-progress-message.patch \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0002-asoc-tas2781-add-tas2563-codec-support.patch', '', d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d), d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0009-asoc-tas2562-tas2563-boost-class-g.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0009-asoc-tas2562-tas2563-boost-class-g.patch', '', d), d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://tas2562-driver.cfg', '', d), d)} \
 		${@bb.utils.contains('ENABLE_BOOT_PROFILING', '1', 'file://boot-profiling.cfg', '', d)} \
 		file://imx8mm-jaguar-dt510/rdc-driver.cfg \
