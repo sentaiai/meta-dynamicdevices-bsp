@@ -70,6 +70,7 @@ set_echo_removal_mode() {
     log_info "Configuring Profile 8 (echo reference)"
 
     if check_dsp_firmware; then
+        log_info "DSP firmware detected - using DSP mode"
         if control_exists "Speaker Program Id"; then
             amixer -c "$AUDIO_CARD" cset name="Speaker Program Id" 0
         else

@@ -1,0 +1,32 @@
+From: Dynamic Devices <support@dynamicdevices.co.uk>
+Date: Mon, 27 Jul 2026 00:00:00 +0000
+Subject: [PATCH] ASoC: tas2781: Fix reset GPIO pulse for active-low shutdown
+
+tasdevice_reset() ended with gpio active, holding TAS2563 in shutdown on
+GPIO_ACTIVE_LOW reset lines. I2C then fails with -ENXIO during firmware
+programming.
+
+Pulse reset (assert) then release (deassert) so the codec is running when
+register blocks are applied.
+
+Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
+---
+ sound/soc/codecs/tas2781-comlib-i2c.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/sound/soc/codecs/tas2781-comlib-i2c.c b/sound/soc/codecs/tas2781-comlib-i2c.c
+index 0000000..0000000 100644
+--- a/sound/soc/codecs/tas2781-comlib-i2c.c
++++ b/sound/soc/codecs/tas2781-comlib-i2c.c
+@@ -312,9 +312,9 @@ void tasdevice_reset(struct tasdevice_priv *tas_dev)
+ 	int ret, i;
+ 
+ 	if (tas_dev->reset) {
+-		gpiod_set_value_cansleep(tas_dev->reset, 0);
++		gpiod_set_value_cansleep(tas_dev->reset, 1);
+ 		usleep_range(500, 1000);
+-		gpiod_set_value_cansleep(tas_dev->reset, 1);
++		gpiod_set_value_cansleep(tas_dev->reset, 0);
+ 	} else {
+ 		for (i = 0; i < tas_dev->ndev; i++) {
+ 			ret = tasdevice_dev_write(tas_dev, i,
