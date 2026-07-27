@@ -8,7 +8,7 @@ SCRIPT_NAME="tas2563-init"
 LOG_TAG="[$SCRIPT_NAME]"
 AUDIO_CARD="tas2563audio"
 FW_RCA="/lib/firmware/tas2563RCA1.bin"
-FW_COEF="/lib/firmware/tas2563-coef.bin"
+FW_COEF="/lib/firmware/tas2563_coef.bin"
 
 log_info() {
     echo "$LOG_TAG INFO: $1"

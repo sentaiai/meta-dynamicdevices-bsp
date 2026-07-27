@@ -24,14 +24,13 @@ do_install() {
     # tas2563RCA1.bin = Register Configuration Array for TAS2563 (regbin file)
     install -m 644 ${WORKDIR}/tas2563-1amp-reg.bin ${D}${nonarch_base_libdir}/firmware/tas2563RCA1.bin
     
-    # Install TAS2563 DSP firmware (CoefBin) for mainline TAS2781 driver  
-    # This contains DSP algorithms and acoustic parameters
-    install -m 644 ${WORKDIR}/TAS2XXX3870.bin ${D}${nonarch_base_libdir}/firmware/tas2563-coef.bin
+    # Driver requests tas2563_coef.bin (underscore, not hyphen)
+    install -m 644 ${WORKDIR}/TAS2XXX3870.bin ${D}${nonarch_base_libdir}/firmware/tas2563_coef.bin
 }
 
 FILES:${PN} = " \
     ${nonarch_base_libdir}/firmware/tas2563RCA1.bin \
-    ${nonarch_base_libdir}/firmware/tas2563-coef.bin \
+    ${nonarch_base_libdir}/firmware/tas2563_coef.bin \
 "
 
 # This firmware is required for TAS2563 codec operation with TAS2781 mainline driver

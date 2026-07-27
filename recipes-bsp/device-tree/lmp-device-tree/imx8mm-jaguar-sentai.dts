@@ -337,14 +337,8 @@
 //       };
 //};
 
-&gpio5 {
-       audio-shutdown-hog {
-		gpio-hog;
-		gpios = <4 GPIO_ACTIVE_LOW>;
-		output-low;
-		line-name = "tas2563-shutdown";
-       };
-};
+// Reset/shutdown GPIO is owned by the TAS2781 driver via tas2563 reset-gpios.
+// Do not gpio-hog this line: output-low holds the amp in shutdown (no audio).
 
 &fec1 {
         status = "disabled";

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 FW_RCA="/lib/firmware/tas2563RCA1.bin"
-FW_COEF="/lib/firmware/tas2563-coef.bin"
+FW_COEF="/lib/firmware/tas2563_coef.bin"
 
 # Firmware must exist before the TAS2781 driver probes the codec.
 i=0
