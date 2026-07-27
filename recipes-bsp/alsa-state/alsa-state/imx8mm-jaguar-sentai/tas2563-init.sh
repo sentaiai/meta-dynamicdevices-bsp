@@ -106,6 +106,7 @@ set_optimal_volume() {
 
     if control_exists "tas2563-digital-mute"; then
         amixer -c "$AUDIO_CARD" cset name="tas2563-digital-mute" 0
+        log_info "Unmuted TAS2563 (PWR_CTRL)"
     fi
 }
 

@@ -1,0 +1,97 @@
+From: Dynamic Devices <support@dynamicdevices.co.uk>
+Date: Mon, 27 Jul 2026 00:00:00 +0000
+Subject: [PATCH] ASoC: tas2781: Add TAS2563 digital mute control
+
+The mainline TAS2563 path can leave PWR_CTRL bit0 set after profile load,
+silencing the amp even when Speaker Digital Volume is high. Port the
+out-of-tree mute control so userspace can unmute the device.
+
+Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
+---
+ include/sound/tas2781.h        |  1 +
+ sound/soc/codecs/tas2781-i2c.c | 67 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 68 insertions(+)
+
+diff --git a/include/sound/tas2781.h b/include/sound/tas2781.h
+index 0000000..0000000 100644
+--- a/include/sound/tas2781.h
++++ b/include/sound/tas2781.h
+@@ -93,6 +93,7 @@
+ 
+ /* Volume control */
+ #define TAS2563_DVC_LVL			TASDEVICE_REG(0x00, 0x02, 0x0c)
++#define TAS2563_PWR_CTRL		TASDEVICE_REG(0x00, 0x02, 0x0e)
+ #define TAS2781_DVC_LVL			TASDEVICE_REG(0x0, 0x0, 0x1a)
+ #define TAS2781_AMP_LEVEL		TASDEVICE_REG(0x0, 0x0, 0x03)
+ #define TAS2781_AMP_LEVEL_MASK		GENMASK(5, 1)
+diff --git a/sound/soc/codecs/tas2781-i2c.c b/sound/soc/codecs/tas2781-i2c.c
+index 0000000..0000000 100644
+--- a/sound/soc/codecs/tas2781-i2c.c
++++ b/sound/soc/codecs/tas2781-i2c.c
+@@ -780,6 +780,71 @@ static int tas2563_digital_gain_put(
+ 	return rc;
+ }
+ 
++static int tas2563_digital_mute_get(struct snd_kcontrol *kcontrol,
++	struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct tasdevice_priv *tas_dev = snd_soc_component_get_drvdata(codec);
++	unsigned int val;
++	int ret;
++
++	ret = tasdevice_dev_read(tas_dev, 0, TAS2563_PWR_CTRL, &val);
++	if (ret) {
++		dev_err(tas_dev->dev, "%s, get mute error\n", __func__);
++		return ret;
++	}
++
++	ucontrol->value.integer.value[0] = (val & 0x01) ? 1 : 0;
++	return 0;
++}
++
++static int tas2563_digital_mute_put(struct snd_kcontrol *kcontrol,
++	struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct tasdevice_priv *tas_dev = snd_soc_component_get_drvdata(codec);
++	unsigned int mute_val, current_val;
++	int i, ret = 0;
++
++	mute_val = ucontrol->value.integer.value[0] ? 1 : 0;
++
++	for (i = 0; i < tas_dev->ndev; i++) {
++		ret = tasdevice_dev_read(tas_dev, i, TAS2563_PWR_CTRL, &current_val);
++		if (ret) {
++			dev_err(tas_dev->dev, "%s, read PWR_CTRL error in device %d\n",
++				__func__, i);
++			continue;
++		}
++
++		if (mute_val)
++			current_val |= 0x01;
++		else
++			current_val &= ~0x01;
++
++		ret = tasdevice_dev_write(tas_dev, i, TAS2563_PWR_CTRL, current_val);
++		if (ret) {
++			dev_err(tas_dev->dev, "%s, set mute error in device %d\n",
++				__func__, i);
++		}
++	}
++
++	return ret;
++}
++
+ static const struct snd_kcontrol_new tasdevice_snd_controls[] = {
+ 	SOC_SINGLE_BOOL_EXT("Speaker Force Firmware Load", 0,
+ 		tasdev_force_fwload_get, tasdev_force_fwload_put),
+@@ -800,6 +865,8 @@ static const struct snd_kcontrol_new tas2563_snd_controls[] = {
+ 		0, ARRAY_SIZE(tas2563_dvc_table) - 1, 0,
+ 		tas2563_digital_gain_get, tas2563_digital_gain_put,
+ 		tas2563_dvc_tlv),
++	SOC_SINGLE_EXT("tas2563-digital-mute", 0, 0, 1, 0,
++		tas2563_digital_mute_get, tas2563_digital_mute_put),
+ };
+ 
+ static const struct snd_kcontrol_new tas2563_cali_controls[] = {
