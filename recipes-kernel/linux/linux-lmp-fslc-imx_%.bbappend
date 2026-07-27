@@ -29,6 +29,7 @@ SRC_URI:append:imx8mm-jaguar-sentai = " \
 		file://0002-asoc-tas2781-add-tas2563-codec-support.patch \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'file://0010-asoc-tas2781-fix-reset-gpio-pulse.patch', '', d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'file://0011-asoc-tas2781-add-tas2563-digital-mute.patch', '', d)} \
+		${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'file://0012-asoc-tas2781-unmute-after-dapm-power-up.patch', '', d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://0008-asoc-tas2562-fix-format-definition.patch', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://0008-asoc-tas2562-fix-format-definition.patch', '', d), d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2562', 'file://tas2562-driver.cfg', bb.utils.contains('MACHINE_FEATURES', 'tas2563', 'file://tas2562-driver.cfg', '', d), d)} \
 		${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'file://tas2781-mainline-driver.cfg', '', d)} \

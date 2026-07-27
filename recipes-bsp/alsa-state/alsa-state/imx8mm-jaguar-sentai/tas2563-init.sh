@@ -99,7 +99,7 @@ set_optimal_volume() {
     fi
 
     if control_exists "Speaker Digital Volume"; then
-        amixer -c "$AUDIO_CARD" cset name="Speaker Digital Volume" 82
+        amixer -c "$AUDIO_CARD" cset name="Speaker Digital Volume" 200
     elif control_exists "tas2563-digital-volume"; then
         amixer -c "$AUDIO_CARD" cset name="tas2563-digital-volume" 49152
     fi
@@ -108,6 +108,12 @@ set_optimal_volume() {
         amixer -c "$AUDIO_CARD" cset name="tas2563-digital-mute" 0
         log_info "Unmuted TAS2563 (PWR_CTRL)"
     fi
+}
+
+# Profile/regbin load can re-assert PWR_CTRL mute after the first volume pass.
+finalize_after_profile_load() {
+    sleep 2
+    set_optimal_volume
 }
 
 show_status() {
@@ -127,7 +133,7 @@ main() {
     case "$mode" in
         default|echo-removal|basic|audio)
             set_echo_removal_mode || exit 1
-            set_optimal_volume
+            finalize_after_profile_load
             ;;
         status)
             show_status

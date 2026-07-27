@@ -1,0 +1,42 @@
+From: Dynamic Devices <support@dynamicdevices.co.uk>
+Date: Mon, 27 Jul 2026 00:00:00 +0000
+Subject: [PATCH] ASoC: tas2781: Unmute TAS2563 after DAPM power-up
+
+PRE_SHUTDOWN runs on stream close (SND_SOC_DAPM_PRE_PMD) and sets PWR_CTRL
+mute. PRE_POWER_UP on the next open does not always clear it, so the second
+and later playback attempts are silent until userspace unmutes again.
+
+Clear PWR_CTRL bit 0 on POST_PMU for TAS2563.
+
+Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
+---
+ sound/soc/codecs/tas2781-i2c.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/sound/soc/codecs/tas2781-i2c.c b/sound/soc/codecs/tas2781-i2c.c
+--- a/sound/soc/codecs/tas2781-i2c.c
++++ b/sound/soc/codecs/tas2781-i2c.c
+@@ -1667,8 +1667,23 @@ static int tasdevice_dapm_event(struct snd_soc_dapm_widget *w,
+ 	if (event == SND_SOC_DAPM_PRE_PMD)
+ 		state = 1;
+ 	tasdevice_tuning_switch(tas_priv, state);
++
++	if (event == SND_SOC_DAPM_POST_PMU && tas_priv->chip_id == TAS2563) {
++		unsigned int val;
++		int i, ret;
++
++		for (i = 0; i < tas_priv->ndev; i++) {
++			ret = tasdevice_dev_read(tas_priv, i, TAS2563_PWR_CTRL,
++						 &val);
++			if (ret)
++				continue;
++			val &= ~0x01;
++			tasdevice_dev_write(tas_priv, i, TAS2563_PWR_CTRL, val);
++		}
++	}
++
+ 	/* Codec Lock Release*/
+ 	mutex_unlock(&tas_priv->codec_lock);
+ 
+ 	return 0;
+ }
