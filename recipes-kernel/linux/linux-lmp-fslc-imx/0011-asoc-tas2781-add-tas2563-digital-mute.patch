@@ -9,8 +9,8 @@ out-of-tree mute control so userspace can unmute the device.
 Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
 ---
  include/sound/tas2781.h        |  1 +
- sound/soc/codecs/tas2781-i2c.c | 67 ++++++++++++++++++++++++++++++++++
- 2 files changed, 68 insertions(+)
+ sound/soc/codecs/tas2781-i2c.c | 53 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 54 insertions(+)
 
 diff --git a/include/sound/tas2781.h b/include/sound/tas2781.h
 --- a/include/sound/tas2781.h
@@ -26,7 +26,7 @@ diff --git a/include/sound/tas2781.h b/include/sound/tas2781.h
 diff --git a/sound/soc/codecs/tas2781-i2c.c b/sound/soc/codecs/tas2781-i2c.c
 --- a/sound/soc/codecs/tas2781-i2c.c
 +++ b/sound/soc/codecs/tas2781-i2c.c
-@@ -937,6 +937,65 @@ static int tas2563_digital_gain_put(
+@@ -948,4 +948,55 @@ static int tas2563_digital_gain_put(
  	mutex_unlock(&tas_dev->codec_lock);
  	return rc;
  }
@@ -82,10 +82,7 @@ diff --git a/sound/soc/codecs/tas2781-i2c.c b/sound/soc/codecs/tas2781-i2c.c
 +	return ret;
 +}
 +
- static const struct snd_kcontrol_new tasdevice_snd_controls[] = {
- 	SOC_SINGLE_BOOL_EXT("Speaker Force Firmware Load", 0,
- 		tasdev_force_fwload_get, tasdev_force_fwload_put),
-@@ -971,6 +1030,8 @@ static const struct snd_kcontrol_new tas2563_snd_controls[] = {
+@@ -971,6 +1022,8 @@ static const struct snd_kcontrol_new tas2563_snd_controls[] = {
  		0, ARRAY_SIZE(tas2563_dvc_table) - 1, 0,
  		tas2563_digital_gain_get, tas2563_digital_gain_put,
  		tas2563_dvc_tlv),
