@@ -13,10 +13,9 @@ Signed-off-by: Dynamic Devices <support@dynamicdevices.co.uk>
  2 files changed, 68 insertions(+)
 
 diff --git a/include/sound/tas2781.h b/include/sound/tas2781.h
-index 0000000..0000000 100644
 --- a/include/sound/tas2781.h
 +++ b/include/sound/tas2781.h
-@@ -93,6 +93,7 @@
+@@ -102,6 +102,7 @@
  
  /* Volume control */
  #define TAS2563_DVC_LVL			TASDEVICE_REG(0x00, 0x02, 0x0c)
@@ -25,10 +24,10 @@ index 0000000..0000000 100644
  #define TAS2781_AMP_LEVEL		TASDEVICE_REG(0x0, 0x0, 0x03)
  #define TAS2781_AMP_LEVEL_MASK		GENMASK(5, 1)
 diff --git a/sound/soc/codecs/tas2781-i2c.c b/sound/soc/codecs/tas2781-i2c.c
-index 0000000..0000000 100644
 --- a/sound/soc/codecs/tas2781-i2c.c
 +++ b/sound/soc/codecs/tas2781-i2c.c
-@@ -780,6 +780,71 @@ static int tas2563_digital_gain_put(
+@@ -937,6 +937,65 @@ static int tas2563_digital_gain_put(
+ 	mutex_unlock(&tas_dev->codec_lock);
  	return rc;
  }
  
@@ -86,7 +85,7 @@ index 0000000..0000000 100644
  static const struct snd_kcontrol_new tasdevice_snd_controls[] = {
  	SOC_SINGLE_BOOL_EXT("Speaker Force Firmware Load", 0,
  		tasdev_force_fwload_get, tasdev_force_fwload_put),
-@@ -800,6 +865,8 @@ static const struct snd_kcontrol_new tas2563_snd_controls[] = {
+@@ -971,6 +1030,8 @@ static const struct snd_kcontrol_new tas2563_snd_controls[] = {
  		0, ARRAY_SIZE(tas2563_dvc_table) - 1, 0,
  		tas2563_digital_gain_get, tas2563_digital_gain_put,
  		tas2563_dvc_tlv),
