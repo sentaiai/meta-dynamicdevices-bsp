@@ -1,8 +1,12 @@
 [Unit]
 Description=Load audio drivers in order
+Before=tas2563-init.service sound.target
+DefaultDependencies=no
 
 [Service]
 User=root
+Type=oneshot
+RemainAfterExit=yes
 ExecStart=/bin/bash /usr/bin/load-audio-drivers.sh
 
 [Install]

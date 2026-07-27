@@ -1,7 +1,7 @@
 [Unit]
 Description=TAS2563 Audio Codec Initialization
-After=sound.target alsa-state.service
-Wants=sound.target
+After=audio-driver.service sound.target alsa-state.service
+Wants=audio-driver.service sound.target
 Requisite=sound.target
 
 [Service]

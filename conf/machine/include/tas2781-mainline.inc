@@ -11,8 +11,8 @@ MACHINE_EXTRA_RRECOMMENDS:remove = " \
     ${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'kernel-module-tas2781 kernel-module-tas2563', '', d)} \
 "
 
-# Add TAS2563 firmware for mainline TAS2781 driver
-MACHINE_EXTRA_RRECOMMENDS:append = " \
+# Add TAS2563 firmware for mainline TAS2781 driver (required, not optional)
+MACHINE_EXTRA_RDEPENDS:append = " \
     ${@bb.utils.contains('MACHINE_FEATURES', 'tas2781-mainline', 'firmware-tas2563', '', d)} \
 "
 
