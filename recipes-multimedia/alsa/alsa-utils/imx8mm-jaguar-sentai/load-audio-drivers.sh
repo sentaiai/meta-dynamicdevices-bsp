@@ -1,27 +1,25 @@
 #!/bin/sh
 
-FW_RCA="/lib/firmware/tas2563RCA1.bin"
-FW_COEF="/lib/firmware/tas2563_coef.bin"
+FW_REG="/lib/firmware/tas2563-1amp-reg.bin"
+FW_DSP="/lib/firmware/tas2563-1amp-dsp.bin"
 
-# Firmware must exist before the TAS2781 driver probes the codec.
+# Firmware must exist before the OOT TAS2563 driver probes the codec.
 i=0
 while [ $i -lt 30 ]; do
-    if [ -f "$FW_RCA" ] && [ -f "$FW_COEF" ]; then
+    if [ -f "$FW_REG" ] && [ -f "$FW_DSP" ]; then
         break
     fi
     sleep 1
     i=$((i + 1))
 done
 
-if [ ! -f "$FW_RCA" ] || [ ! -f "$FW_COEF" ]; then
-    echo "load-audio-drivers: missing TAS2563 firmware ($FW_RCA, $FW_COEF)" >&2
+if [ ! -f "$FW_REG" ] || [ ! -f "$FW_DSP" ]; then
+    echo "load-audio-drivers: missing TAS2563 firmware ($FW_REG, $FW_DSP)" >&2
     exit 1
 fi
 
 modprobe snd-soc-fsl-micfil
-modprobe snd-soc-tas2781-comlib-i2c
-modprobe snd-soc-tas2781-fmwlib
-modprobe snd-soc-tas2781-i2c
+modprobe snd-soc-integrated-tasdevice
 
 if [ -x /usr/bin/detect-audio-hardware.sh ]; then
     /usr/bin/detect-audio-hardware.sh

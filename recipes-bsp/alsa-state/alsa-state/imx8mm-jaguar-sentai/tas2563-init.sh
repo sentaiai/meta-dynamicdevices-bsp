@@ -1,14 +1,14 @@
 #!/bin/sh
 
 #
-# TAS2563 SmartAMP initialization for mainline TAS2781 driver (ti,tas2563).
+# TAS2563 SmartAMP initialization for TI OOT integrated driver (snd-soc-integrated-tasdevice).
 #
 
 SCRIPT_NAME="tas2563-init"
 LOG_TAG="[$SCRIPT_NAME]"
 AUDIO_CARD="tas2563audio"
-FW_RCA="/lib/firmware/tas2563RCA1.bin"
-FW_COEF="/lib/firmware/tas2563_coef.bin"
+FW_REG="/lib/firmware/tas2563-1amp-reg.bin"
+FW_DSP="/lib/firmware/tas2563-1amp-dsp.bin"
 
 log_info() {
     echo "$LOG_TAG INFO: $1"
@@ -23,13 +23,13 @@ log_error() {
 wait_for_firmware() {
     i=0
     while [ $i -lt 30 ]; do
-        if [ -f "$FW_RCA" ] && [ -f "$FW_COEF" ]; then
+        if [ -f "$FW_REG" ] && [ -f "$FW_DSP" ]; then
             return 0
         fi
         sleep 1
         i=$((i + 1))
     done
-    log_error "TAS2563 firmware missing ($FW_RCA, $FW_COEF)"
+    log_error "TAS2563 firmware missing ($FW_REG, $FW_DSP)"
     return 1
 }
 
@@ -52,10 +52,10 @@ control_exists() {
 
 set_profile() {
     profile="$1"
-    if control_exists "Speaker Profile Id"; then
-        amixer -c "$AUDIO_CARD" cset name="Speaker Profile Id" "$profile"
-    elif control_exists "TASDEVICE Profile id"; then
+    if control_exists "TASDEVICE Profile id"; then
         amixer -c "$AUDIO_CARD" cset name="TASDEVICE Profile id" "$profile"
+    elif control_exists "Speaker Profile Id"; then
+        amixer -c "$AUDIO_CARD" cset name="Speaker Profile Id" "$profile"
     else
         log_error "Profile control not found"
         return 1
@@ -63,7 +63,7 @@ set_profile() {
 }
 
 check_dsp_firmware() {
-    control_exists "Speaker Program Id" || control_exists "Program"
+    control_exists "Program" || control_exists "Speaker Program Id"
 }
 
 set_echo_removal_mode() {
@@ -71,16 +71,16 @@ set_echo_removal_mode() {
 
     if check_dsp_firmware; then
         log_info "DSP firmware detected - using DSP mode"
-        if control_exists "Speaker Program Id"; then
-            amixer -c "$AUDIO_CARD" cset name="Speaker Program Id" 0
-        else
+        if control_exists "Program"; then
             amixer -c "$AUDIO_CARD" cset name="Program" 0
+        else
+            amixer -c "$AUDIO_CARD" cset name="Speaker Program Id" 0
         fi
         set_profile 8 || return 1
-        if control_exists "Speaker Config Id"; then
-            amixer -c "$AUDIO_CARD" cset name="Speaker Config Id" 0
-        elif control_exists "Configuration"; then
+        if control_exists "Configuration"; then
             amixer -c "$AUDIO_CARD" cset name="Configuration" 0
+        elif control_exists "Speaker Config Id"; then
+            amixer -c "$AUDIO_CARD" cset name="Speaker Config Id" 0
         fi
     else
         log_info "DSP controls absent; using regbin Profile 8 only"
@@ -92,16 +92,20 @@ set_echo_removal_mode() {
 }
 
 set_optimal_volume() {
-    if control_exists "Speaker Analog Volume"; then
-        amixer -c "$AUDIO_CARD" cset name="Speaker Analog Volume" 20
+    if control_exists "Amp Gain"; then
+        amixer -c "$AUDIO_CARD" cset name="Amp Gain" 20
     elif control_exists "tas2563-amp-gain-volume"; then
         amixer -c "$AUDIO_CARD" cset name="tas2563-amp-gain-volume" 20
+    elif control_exists "Speaker Analog Volume"; then
+        amixer -c "$AUDIO_CARD" cset name="Speaker Analog Volume" 20
     fi
 
-    if control_exists "Speaker Digital Volume"; then
-        amixer -c "$AUDIO_CARD" cset name="Speaker Digital Volume" 200
+    if control_exists "Digital Volume Control"; then
+        amixer -c "$AUDIO_CARD" cset name="Digital Volume Control" 110
     elif control_exists "tas2563-digital-volume"; then
         amixer -c "$AUDIO_CARD" cset name="tas2563-digital-volume" 49152
+    elif control_exists "Speaker Digital Volume"; then
+        amixer -c "$AUDIO_CARD" cset name="Speaker Digital Volume" 82
     fi
 
     if control_exists "tas2563-digital-mute"; then
@@ -110,7 +114,6 @@ set_optimal_volume() {
     fi
 }
 
-# Profile/regbin load can re-assert PWR_CTRL mute after the first volume pass.
 finalize_after_profile_load() {
     sleep 2
     set_optimal_volume
@@ -118,7 +121,7 @@ finalize_after_profile_load() {
 
 show_status() {
     log_info "Current TAS2563 status:"
-    amixer -c "$AUDIO_CARD" controls | grep -i "speaker\|tas\|program\|profile\|config" || true
+    amixer -c "$AUDIO_CARD" controls | grep -i "speaker\|tas\|program\|profile\|config\|volume\|gain" || true
 }
 
 main() {

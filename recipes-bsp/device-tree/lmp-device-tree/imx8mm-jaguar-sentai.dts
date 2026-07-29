@@ -25,12 +25,10 @@
 	sound-tas2563 {
                 compatible = "simple-audio-card";
                 simple-audio-card,name = "tas2563-audio";
-                simple-audio-card,format = "i2s";
+                simple-audio-card,format = "dsp_a";
                 simple-audio-card,frame-master = <&cpudai2>;
                 simple-audio-card,bitclock-master = <&cpudai2>;
-                
-                // TAS2562 driver routing (simpler than TAS2781)
-                // The TAS2562 driver doesn't use DMIC widgets
+
                 simple-audio-card,widgets =
                         "Speaker", "Speaker";
                 simple-audio-card,routing =
@@ -38,7 +36,7 @@
 
                 cpudai2: simple-audio-card,cpu {
                         sound-dai = <&sai3>;
-                        dai-tdm-slot-num = <4>;  /* Increase to 4 slots for Profile 8 */
+                        dai-tdm-slot-num = <4>;
                         dai-tdm-slot-width = <32>;
                 };
 
@@ -362,19 +360,15 @@
                 #sound-dai-cells = <0>;
                 compatible = "ti,tas2563";
                 reg = <0x4C>;
-                ti,channels = <1>; /* channel number */
-                reset-gpios = <&gpio5 4 GPIO_ACTIVE_LOW>;   /* Enable reset control - active low */
+                ti,channels = <1>;
+                reset-gpios = <&gpio5 4 GPIO_ACTIVE_LOW>;
                 interrupt-parent = <&gpio5>;
                 interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
-                
-                // Basic I2S Configuration for TAS2562 driver
-                ti,asi-format = <0>; /* 0=I2S format */
-                ti,left-slot = <0>; /* Left audio channel */
-                ti,right-slot = <1>; /* Right audio channel */
-                
-                // TAS2562 driver does not support PDM microphones
-                // Use MICFIL for microphone input instead
-                
+
+                ti,asi-format = <1>; /* 0=I2S, 1=DSP/TDM (TI OOT) */
+                ti,left-slot = <0>;
+                ti,echo-ref = <2>;
+
                 status = "okay";
         };
 };

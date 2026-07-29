@@ -30,8 +30,8 @@ do_install:append() {
   install -m 644 ${WORKDIR}/TAS2XXX3870.bin ${D}${nonarch_base_libdir}/firmware/tas2563-1amp-dsp.bin
 }
 
-FILES:${PN} += "/lib/modules*" 
+FILES:${PN} += "/lib/modules*"
 FILES:${PN} += "${nonarch_base_libdir}/firmware/tas2563-1amp-reg.bin" 
 FILES:${PN} += "${nonarch_base_libdir}/firmware/tas2563-1amp-dsp.bin" 
 
-KERNEL_MODULE_AUTOLOAD:append = "snd-soc-tas2781"
+COMPATIBLE_MACHINE = "(imx8mm-jaguar-sentai)"
