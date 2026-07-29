@@ -1,8 +1,22 @@
---- a/src/tasdevice-codec.c
-+++ b/src/tasdevice-codec.c
-@@ -116,8 +116,15 @@ static int tasdevice_dapm_event(struct snd_soc_dapm_widget *w,
- 	case SND_SOC_DAPM_POST_PMU:
- 		dev_info(tas_dev->dev, "SND_SOC_DAPM_POST_PMU\n");
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alex J Lennon <ajlennon@dynamicdevices.co.uk>
+Date: Fri, 13 Dec 2024 11:00:00 +0000
+Subject: [PATCH] Reset TAS2563 configuration state on DAPM power down
+
+Reset mnCurrentConfiguration during PRE_PMD so the codec re-applies the
+profile/regbin block on the next stream start.
+
+Upstream-Status: Pending
+Signed-off-by: Alex J Lennon <ajlennon@dynamicdevices.co.uk>
+---
+ tasdevice-codec.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/tasdevice-codec.c b/tasdevice-codec.c
+index eb62f1d..c1d2e3f 100644
+--- a/tasdevice-codec.c
++++ b/tasdevice-codec.c
+@@ -119,6 +119,12 @@ static int tasdevice_dapm_event(struct snd_soc_dapm_widget *w,
  		break;
  	case SND_SOC_DAPM_PRE_PMD:
  		dev_info(tas_dev->dev, "SND_SOC_DAPM_PRE_PMD\n");
@@ -15,4 +29,5 @@
  		break;
  	}
  
- 	return 0;
+-- 
+2.34.1
