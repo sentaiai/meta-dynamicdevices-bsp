@@ -62,30 +62,41 @@ set_profile() {
     fi
 }
 
-check_dsp_firmware() {
-    control_exists "Program" || control_exists "Speaker Program Id"
+set_program() {
+    program="$1"
+    if control_exists "Program"; then
+        amixer -c "$AUDIO_CARD" cset name="Program" "$program"
+    elif control_exists "Speaker Program Id"; then
+        amixer -c "$AUDIO_CARD" cset name="Speaker Program Id" "$program"
+    fi
+}
+
+set_configuration() {
+    config="$1"
+    if control_exists "Configuration"; then
+        amixer -c "$AUDIO_CARD" cset name="Configuration" "$config"
+    elif control_exists "Speaker Config Id"; then
+        amixer -c "$AUDIO_CARD" cset name="Speaker Config Id" "$config"
+    fi
+}
+
+set_basic_mode() {
+    log_info "Configuring Profile 0 (I2S playback)"
+
+    set_profile 0 || return 1
+    set_program 0
+    set_configuration 0
+
+    log_info "Profile 0 configured"
+    return 0
 }
 
 set_echo_removal_mode() {
-    log_info "Configuring Profile 8 (echo reference)"
+    log_info "Configuring Profile 8 (echo reference / TDM)"
 
-    if check_dsp_firmware; then
-        log_info "DSP firmware detected - using DSP mode"
-        if control_exists "Program"; then
-            amixer -c "$AUDIO_CARD" cset name="Program" 0
-        else
-            amixer -c "$AUDIO_CARD" cset name="Speaker Program Id" 0
-        fi
-        set_profile 8 || return 1
-        if control_exists "Configuration"; then
-            amixer -c "$AUDIO_CARD" cset name="Configuration" 0
-        elif control_exists "Speaker Config Id"; then
-            amixer -c "$AUDIO_CARD" cset name="Speaker Config Id" 0
-        fi
-    else
-        log_info "DSP controls absent; using regbin Profile 8 only"
-        set_profile 8 || return 1
-    fi
+    set_profile 8 || return 1
+    set_program 0
+    set_configuration 0
 
     log_info "Profile 8 configured"
     return 0
@@ -134,7 +145,11 @@ main() {
     sleep 1
 
     case "$mode" in
-        default|echo-removal|basic|audio)
+        default|basic|audio)
+            set_basic_mode || exit 1
+            finalize_after_profile_load
+            ;;
+        echo-removal)
             set_echo_removal_mode || exit 1
             finalize_after_profile_load
             ;;
@@ -142,7 +157,7 @@ main() {
             show_status
             ;;
         *)
-            echo "Usage: $0 [default|echo-removal|status]"
+            echo "Usage: $0 [default|basic|echo-removal|status]"
             exit 1
             ;;
     esac

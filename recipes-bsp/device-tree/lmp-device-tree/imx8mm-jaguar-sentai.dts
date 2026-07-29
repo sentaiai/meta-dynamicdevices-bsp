@@ -25,7 +25,7 @@
 	sound-tas2563 {
                 compatible = "simple-audio-card";
                 simple-audio-card,name = "tas2563-audio";
-                simple-audio-card,format = "dsp_a";
+                simple-audio-card,format = "i2s";
                 simple-audio-card,frame-master = <&cpudai2>;
                 simple-audio-card,bitclock-master = <&cpudai2>;
 
@@ -36,8 +36,6 @@
 
                 cpudai2: simple-audio-card,cpu {
                         sound-dai = <&sai3>;
-                        dai-tdm-slot-num = <4>;
-                        dai-tdm-slot-width = <32>;
                 };
 
                 simple-audio-card,codec {
@@ -365,9 +363,9 @@
                 interrupt-parent = <&gpio5>;
                 interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
 
-                ti,asi-format = <1>; /* 0=I2S, 1=DSP/TDM (TI OOT) */
+                ti,asi-format = <0>; /* 0=I2S, 1=DSP/TDM */
                 ti,left-slot = <0>;
-                ti,echo-ref = <2>;
+                ti,right-slot = <1>;
 
                 status = "okay";
         };
